@@ -1,27 +1,34 @@
+"""Download the dataset once and save a local Hugging Face DatasetDict copy.
+
+Run from the ml directory with: python jaundice_dataset.py
+Afterward, run preprocess.py to create the FastAI train/valid/test folders.
+"""
+
+from collections import Counter
 from pathlib import Path
 
-from datasets import load_from_disk
+from datasets import load_dataset, load_from_disk
 
-# Load the dataset that was previously saved with ds.save_to_disk(...).
-# This reads the local copy, so it does not need to download it from Hugging Face again.
-dataset = load_from_disk("data/jaundice_dataset")
 
-# Export each image as a separate JPEG, keeping train and test images in separate folders.
+DATASET_ID = "Bleachcarte/Jaundice_Dataset"
+DATASET_DIR = Path("data/jaundice_dataset")
+
+
+try:
+    # Reuse the local saved dataset when it is already available and valid.
+    dataset = load_from_disk(str(DATASET_DIR))
+    print(f"Loaded local dataset from {DATASET_DIR}")
+except (FileNotFoundError, ValueError):
+    # The folder may exist as an empty placeholder; in that case fetch the source.
+    # Download from Hugging Face; no manual browser download is needed.
+    dataset = load_dataset(DATASET_ID)
+    DATASET_DIR.parent.mkdir(parents=True, exist_ok=True)
+    dataset.save_to_disk(str(DATASET_DIR))
+    print(f"Downloaded and saved dataset to {DATASET_DIR}")
+
+# Show the split sizes and actual class counts so you can confirm what was saved.
+label_names = dataset["train"].features["label"].names
+print(f"Classes: {', '.join(label_names)}")
 for split_name, split in dataset.items():
-    # Create a folder for this split, such as data/jaundice_images/train.
-    output_dir = Path("data/jaundice_images") / split_name
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Walk through every example in the split. Each example contains an image and a label.
-    for index, example in enumerate(split):
-        image = example["image"]
-        label = example["label"]
-
-        # Convert to RGB so grayscale or other image modes can be saved consistently as JPEG.
-        image = image.convert("RGB")
-
-        # Include the label in the filename to make the exported files easier to inspect.
-        image_path = output_dir / f"{index}_label-{label}.jpg"
-        image.save(image_path, format="JPEG")
-
-    print(f"Exported {len(split)} images to {output_dir}")
+    counts = Counter(label_names[label_id] for label_id in split["label"])
+    print(f"{split_name}: {len(split)} images — {dict(counts)}")

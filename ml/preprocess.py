@@ -30,9 +30,9 @@ def image_fingerprint(image: Image.Image) -> str:
 def main() -> None:
     # Reuse the saved copy when present. Teammates without it can fetch the same
     # published dataset once; it is saved locally for later reruns.
-    if DATASET_DIR.exists():
+    try:
         dataset = load_from_disk(str(DATASET_DIR))
-    else:
+    except (FileNotFoundError, ValueError):
         dataset = load_dataset(DATASET_ID)
         DATASET_DIR.parent.mkdir(parents=True, exist_ok=True)
         dataset.save_to_disk(str(DATASET_DIR))
