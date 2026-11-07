@@ -1,0 +1,11 @@
+torch
+torchvision
+numpy
+pandas
+pillow
+opencv-python
+scikit-learn
+matplotlib
+jupyter
+datasets
+fastai
