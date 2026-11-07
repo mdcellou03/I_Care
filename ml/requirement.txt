@@ -7,4 +7,5 @@ opencv-python
 scikit-learn
 matplotlib
 jupyter
-Pillow
+datasets
+fastai
