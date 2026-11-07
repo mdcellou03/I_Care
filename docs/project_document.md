@@ -1,0 +1,1 @@
+This is the project for Mexico 2027 Hackthon
