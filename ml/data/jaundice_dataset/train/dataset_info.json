@@ -1,0 +1,44 @@
+{
+  "builder_name": "imagefolder",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "jaundice_dataset",
+  "dataset_size": 59718,
+  "description": "",
+  "download_size": 13295039,
+  "features": {
+    "image": {
+      "_type": "Image"
+    },
+    "label": {
+      "names": [
+        "Healthy",
+        "Jaundice"
+      ],
+      "_type": "ClassLabel"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 13354757,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 47641,
+      "num_examples": 256,
+      "dataset_name": "jaundice_dataset"
+    },
+    "test": {
+      "name": "test",
+      "num_bytes": 12077,
+      "num_examples": 65,
+      "dataset_name": "jaundice_dataset"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
