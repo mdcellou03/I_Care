@@ -6,3 +6,5 @@ python-multipart
 pydantic
 pillow
 python-dotenv
+pillow-heif
+opencv-python

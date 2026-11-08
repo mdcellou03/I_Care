@@ -1,18 +1,45 @@
-"""The analyze endpoint: receives an eye photo and returns the model's prediction.
+"""The analyze endpoint: receives an eye photo (uploaded or taken with the camera)
+and returns the model's prediction.
 
 Uploads are only held in memory for the length of the request. Nothing is saved.
 """
 
 import io
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
-from PIL import Image, UnidentifiedImageError
+from fastapi import APIRouter, File, UploadFile
+from PIL import Image, ImageOps, UnidentifiedImageError
+from pillow_heif import register_heif_opener
 
-from app.config import DISCLAIMER, MAX_UPLOAD_BYTES, MAX_UPLOAD_MB
+from app.config import (
+    DISCLAIMER,
+    LOW_CONFIDENCE_THRESHOLD,
+    MAX_IMAGE_SIDE,
+    MAX_UPLOAD_BYTES,
+    MAX_UPLOAD_MB,
+)
+from app.errors import ApiError
 from app.schemas import AnalyzeResponse
 from app.services import predictor
 
+# Teaches Pillow to open HEIC/HEIF, the default photo format on iPhones.
+register_heif_opener()
+
 router = APIRouter(prefix="/api/v1", tags=["analysis"])
+
+
+def load_image(data: bytes) -> Image.Image:
+    """Decode uploaded bytes into an upright, RGB, reasonably sized image."""
+    try:
+        image = Image.open(io.BytesIO(data))
+        image.load()  # open() is lazy; load() forces a full decode so corrupt files fail here
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+        raise ApiError(400, "invalid_image", "We couldn't read that file. Please upload a JPEG, PNG or HEIC photo.")
+
+    # Phones often store photos sideways plus an EXIF "rotate me" tag; apply it so the eye is upright.
+    image = ImageOps.exif_transpose(image)
+    image = image.convert("RGB")  # drops PNG transparency and handles greyscale
+    image.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE))  # shrinks in place, keeps the aspect ratio
+    return image
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
@@ -23,19 +50,24 @@ def analyze(file: UploadFile = File(...)) -> AnalyzeResponse:
 
     # Read one byte past the limit: enough to detect "too big" without loading a huge file.
     data = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if not data:
+        raise ApiError(400, "empty_file", "The uploaded file is empty.")
     if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, f"Image must be under {MAX_UPLOAD_MB} MB.")
+        raise ApiError(413, "file_too_large", f"Please upload an image under {MAX_UPLOAD_MB} MB.")
 
-    try:
-        image = Image.open(io.BytesIO(data))
-        image.load()  # open() is lazy; load() forces a full decode so corrupt files fail here
-    except (UnidentifiedImageError, OSError):
-        raise HTTPException(400, "Could not read the file as an image.")
+    image = load_image(data)
+
+    # Turn away photos the model can't judge fairly instead of returning a misleading result.
+    quality = predictor.check_quality(image)
+    if not quality["valid"]:
+        raise ApiError(422, "poor_quality", f"{quality['reason']}. Please retake the photo in good, even light.")
 
     result = predictor.predict(image)
     return AnalyzeResponse(
         predicted_class=result["label"],
         confidence=result["confidence"],
         scores=result["scores"],
+        low_confidence=result["confidence"] < LOW_CONFIDENCE_THRESHOLD,
+        recommendation=result["recommendation"],
         disclaimer=DISCLAIMER,
     )
