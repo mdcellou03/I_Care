@@ -1,5 +1,25 @@
-# Dataset downloads and generated image exports stay local (dataset license/size).
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.ipynb_checkpoints/
+
+# Datasets stay local (licence + size). Sample images already committed stay tracked.
 /data/
 ml/data/
-.venv
 
+# Frontend (Next.js)
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+.env*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
