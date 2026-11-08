@@ -18,19 +18,18 @@ MIN_FACE_WIDTH_RATIO = 0.5
 
 
 def check_framing(image: Image.Image) -> str | None:
-    """Return "multiple_people", "too_far" or "no_eye_found" if the photo can't be used, else None."""
+    """Return "too_far" or "no_eye_found" if the photo can't be used, else None."""
     gray = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2GRAY)
     width = gray.shape[1]
 
     faces = _FACE.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(width // 12, width // 12))
-    if len(faces) > 1:
-        return "multiple_people"
 
-    # A whole face is visible, so judge distance by how much of the photo it fills.
-    # (Counting eyes here is unreliable: patterns, nostrils and mouths cause false "eyes".)
-    if len(faces) == 1:
-        face_width = faces[0][2]
-        return "too_far" if face_width / width < MIN_FACE_WIDTH_RATIO else None
+    # A whole face is visible, so judge distance by how much of the photo the largest
+    # face fills. (Close-ups can produce extra overlapping "faces", so we don't count them;
+    # group photos still fail here because each face is small.)
+    if len(faces):
+        largest_face_width = max(w for (_, _, w, _) in faces)
+        return "too_far" if largest_face_width / width < MIN_FACE_WIDTH_RATIO else None
 
     # No whole face: expected for a real close-up, but there must be at least one eye.
     # minSize is relative to the photo, so a tiny, far-away eye doesn't count.
