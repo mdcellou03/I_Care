@@ -7,4 +7,4 @@ pydantic
 pillow
 python-dotenv
 pillow-heif
-opencv-python
+opencv-python>=4.8,<5

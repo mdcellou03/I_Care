@@ -19,7 +19,7 @@ from app.config import (
 )
 from app.errors import ApiError
 from app.schemas import AnalyzeResponse
-from app.services import predictor
+from app.services import framing, predictor
 
 # Teaches Pillow to open HEIC/HEIF, the default photo format on iPhones.
 register_heif_opener()
@@ -31,6 +31,12 @@ RETAKE_TIPS = {
     "Image is too dark": "Move somewhere brighter with even light.",
     "Image is too bright": "Avoid direct sunlight and turn off the flash.",
     "Image is too blurry": "Hold the phone steady and tap the eye to focus.",
+}
+
+FRAMING_MESSAGES = {
+    "multiple_people": "We found more than one person. Please photograph one eye of one person.",
+    "no_eye_found": "We couldn't find an eye. Take a close-up of one eye so it fills most of the photo.",
+    "too_far": "You're too far away. Move closer so one eye fills most of the photo.",
 }
 
 def load_image(data: bytes) -> Image.Image:
@@ -72,6 +78,11 @@ def analyze(file: UploadFile = File(...)) -> AnalyzeResponse:
         tip = RETAKE_TIPS.get(reason, "Please retake the photo.")
         raise ApiError(422, "poor_quality", f"{reason}. {tip}")
 
+    # The model labels anything as one of its classes, so check there's one person's eye first.
+    problem = framing.check_framing(image)
+    if problem:
+        raise ApiError(422, problem, FRAMING_MESSAGES[problem])
+    
     result = predictor.predict(image)
     return AnalyzeResponse(
         predicted_class=result["label"],
