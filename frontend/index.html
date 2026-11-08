@@ -24,7 +24,7 @@
     <main>
       <section class="hero" id="home">
         <span class="eyebrow">AI-ASSISTED SCREENING</span>
-        <h1>A easier way to explore<br class="desktop-break" /> eye health <span aria-hidden="true">👀</span></h1>
+        <h1>A easier way to explore<br class="desktop-break" /> eye health <span aria-hidden="true"></span></h1>
         <p>ICheck uses image analysis to highlight patterns in eye photos, helping raise awareness of eye health in a simple, approachable way.</p>
         <a class="button button-primary hero-button" href="#upload">Get Started <span aria-hidden="true">✦</span></a>
       </section>
@@ -55,27 +55,25 @@
             <div id="scores-wrap" class="scores-wrap"><h4>Other model scores</h4><div id="scores-list"></div></div>
             <p id="urgent-warning" class="urgent-warning" hidden></p>
             <p id="result-disclaimer" class="result-disclaimer"></p>
+            <section class="care-finder" aria-labelledby="care-finder-title">
+              <div class="care-finder-copy">
+                <span class="eyebrow">NEXT STEP</span>
+                <h3 id="care-finder-title">Find an optometrist near me</h3>
+                <p>AI results can be wrong. View nearby optometrists and ophthalmologists on the map.</p>
+              </div>
+              <button id="find-nearby-button" class="button button-secondary" type="button">Optometrist near me</button>
+              <p class="location-note">Your approximate location is used for this search and is not saved by ICheck.</p>
+            </section>
+            <section id="nearby-map-section" class="nearby-map-section" aria-labelledby="nearby-map-title" hidden>
+              <div class="nearby-map-heading"><div><span class="eyebrow">LOCAL EYE CARE</span><h3 id="nearby-map-title">Nearby eye-care providers</h3></div><span class="map-radius">Within 5 km</span></div>
+              <p id="location-status" class="location-status" role="status" aria-live="polite">Finding your location…</p>
+              <div id="nearby-map" class="nearby-map" role="region" aria-label="Map of nearby eye-care providers"></div>
+              <p class="map-attribution">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a></p>
+              <div id="provider-list" class="provider-list"></div>
+              <a id="google-maps-search" class="maps-link" target="_blank" rel="noopener noreferrer" hidden>View nearby optometrists in Google Maps ↗</a>
+            </section>
           </div>
           <div id="api-hint" class="api-hint" hidden><strong>Couldn’t reach the analysis API.</strong><span>Start the FastAPI backend and try again. This page sends the image to <code>/api/v1/analyze</code>.</span></div>
-        </section>
-        <section class="panel provider-panel" aria-labelledby="care-finder-title">
-          <div class="provider-panel-heading">
-            <div class="care-finder-copy">
-              <span class="eyebrow">LOCAL EYE CARE</span>
-              <h2 id="care-finder-title">Find an optometrist near me</h2>
-              <p>AI results can be wrong. View nearby optometrists and ophthalmologists on the map.</p>
-            </div>
-            <button id="find-nearby-button" class="button button-secondary" type="button">Optometrist near me</button>
-          </div>
-          <p class="location-note">Your approximate location is used for this search and is not saved by ICheck.</p>
-          <section id="nearby-map-section" class="nearby-map-section" aria-labelledby="nearby-map-title" hidden>
-            <div class="nearby-map-heading"><div><span class="eyebrow">LOCAL EYE CARE</span><h3 id="nearby-map-title">Nearby eye-care providers</h3></div><span class="map-radius">Within 5 km</span></div>
-            <p id="location-status" class="location-status" role="status" aria-live="polite">Finding your location…</p>
-            <div id="nearby-map" class="nearby-map" role="region" aria-label="Map of nearby eye-care providers"></div>
-            <p class="map-attribution">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a></p>
-            <div id="provider-list" class="provider-list"></div>
-            <a id="google-maps-search" class="maps-link" target="_blank" rel="noopener noreferrer" hidden>View nearby optometrists in Google Maps ↗</a>
-          </section>
         </section>
       </section>
 
