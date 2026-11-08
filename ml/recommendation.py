@@ -19,6 +19,20 @@ URGENT_WARNING = (
 )
 
 RECOMMENDATIONS = {
+    "Bulging_Eyes": {
+        "title": "Bulging Eyes Classification",
+        "description": (
+            "The model classified this image as Bulging Eyes. "
+            "A photo cannot confirm the cause or determine whether an eye is protruding."
+        ),
+        "next_steps": [
+            "Arrange an assessment with a healthcare or eye-care professional, especially if the appearance is new or changing.",
+            "Seek urgent medical care for new bulging with vision changes, severe eye pain, or a severe headache.",
+            "Do not rely on this image classification to diagnose a condition."
+        ],
+        "urgency": "prompt"
+    },
+
     "Cataract": {
         "title": "Possible Cataract",
         "description": (
@@ -121,7 +135,21 @@ def get_recommendation(prediction):
         dict: Information and recommended next steps.
     """
 
-    info = RECOMMENDATIONS.get(prediction)
+    normalized_prediction = " ".join(
+        str(prediction).replace("_", " ").strip().casefold().split()
+    )
+    if normalized_prediction == "bulging eye":
+        normalized_prediction = "bulging eyes"
+
+    info = next(
+        (
+            recommendation
+            for label, recommendation in RECOMMENDATIONS.items()
+            if " ".join(label.replace("_", " ").casefold().split())
+            == normalized_prediction
+        ),
+        None,
+    )
 
     if info is None:
         return {
