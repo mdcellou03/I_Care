@@ -24,17 +24,24 @@ from app.services import predictor
 # Teaches Pillow to open HEIC/HEIF, the default photo format on iPhones.
 register_heif_opener()
 
-router = APIRouter(prefix="/api/v1", tags=["analysis"])
-
+# Specific advice for each reason ml/validate_image.py can return.
+RETAKE_TIPS = {
+    "Image resolution is too low": "Move closer to the eye or use your phone's main camera.",
+    "Image is too dark": "Move somewhere brighter with even light.",
+    "Image is too bright": "Avoid direct sunlight and turn off the flash.",
+    "Image is too blurry": "Hold the phone steady and tap the eye to focus.",
+}
 
 def load_image(data: bytes) -> Image.Image:
     """Decode uploaded bytes into an upright, RGB, reasonably sized image."""
     try:
         image = Image.open(io.BytesIO(data))
         image.load()  # open() is lazy; load() forces a full decode so corrupt files fail here
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
-        raise ApiError(400, "invalid_image", "We couldn't read that file. Please upload a JPEG, PNG or HEIC photo.")
-
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+        # `from exc` keeps the original decoding error attached for debugging.
+        raise ApiError(
+            400, "invalid_image", "We couldn't read that file. Please upload a JPEG, PNG or HEIC photo."
+        ) from exc
     # Phones often store photos sideways plus an EXIF "rotate me" tag; apply it so the eye is upright.
     image = ImageOps.exif_transpose(image)
     image = image.convert("RGB")  # drops PNG transparency and handles greyscale
@@ -60,8 +67,10 @@ def analyze(file: UploadFile = File(...)) -> AnalyzeResponse:
     # Turn away photos the model can't judge fairly instead of returning a misleading result.
     quality = predictor.check_quality(image)
     if not quality["valid"]:
-        raise ApiError(422, "poor_quality", f"{quality['reason']}. Please retake the photo in good, even light.")
-
+        reason = quality["reason"]
+        tip = RETAKE_TIPS.get(reason, "Please retake the photo.")
+        raise ApiError(422, "poor_quality", f"{reason}. {tip}")
+    
     result = predictor.predict(image)
     return AnalyzeResponse(
         predicted_class=result["label"],
