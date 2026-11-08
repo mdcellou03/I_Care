@@ -13,8 +13,8 @@ from PIL import Image
 _FACE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 _EYE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
 
-# A face narrower than this share of the photo means the eyes are too small for the model.
-MIN_FACE_WIDTH_RATIO = 0.5
+# A face narrower than this share of the photo means the eyes are too small to crop reliably.
+MIN_FACE_WIDTH_RATIO = 0.25
 
 
 def check_framing(image: Image.Image) -> str | None:
