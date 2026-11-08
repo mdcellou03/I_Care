@@ -40,8 +40,11 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(_: Request, exc: RequestValidationError):
-        # FastAPI raises this when the form has no "file" field.
-        return _error(422, "missing_file", "Please attach an image in the 'file' field.")
+        # The common case is an upload without a "file" field; anything else is a generic bad request.
+        # (`loc` is a tuple like ("body", "file").)
+        if any(tuple(err.get("loc", ()))[-1:] == ("file",) for err in exc.errors()):
+            return _error(422, "missing_file", "Please attach an image in the 'file' field.")
+        return _error(422, "invalid_request", "The request was not in the expected format.")
 
     @app.exception_handler(Exception)
     async def unexpected_error(_: Request, exc: Exception):

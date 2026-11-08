@@ -284,11 +284,10 @@
   async function loadNearbyProviders(latitude, longitude) {
     ensureNearbyMap(latitude, longitude);
     locationStatus.textContent = "Looking for nearby optometrists and ophthalmologists…";
-    const query = `[out:json][timeout:20];(nwr(around:5000,${latitude},${longitude})["healthcare"~"^(optometrist|ophthalmologist)$"];nwr(around:5000,${latitude},${longitude})["healthcare:speciality"~"(ophthalmology|optometry)"];);out center tags;`;
-    const response = await fetch("/api/nearby-optometrists", {
+    const response = await fetch("/api/v1/nearby-eye-care", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-      body: new URLSearchParams({ data: query }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ latitude, longitude }),
     });
     if (!response.ok) throw new Error("Nearby provider search is temporarily unavailable.");
     const data = await response.json();

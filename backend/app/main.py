@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import ALLOWED_ORIGINS, FRONTEND_DIR
 from app.errors import register_error_handlers
-from app.routes import analyze
+from app.routes import analyze,nearby
 from app.services import predictor
 
 
@@ -34,6 +34,7 @@ app.add_middleware(
 )
 register_error_handlers(app)
 app.include_router(analyze.router)
+app.include_router(nearby.router)
 
 
 @app.get("/health")
