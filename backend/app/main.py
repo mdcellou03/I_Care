@@ -4,7 +4,7 @@ Run from backend/:  uvicorn app.main:app --reload
 """
 
 from contextlib import asynccontextmanager
-from fastapi.staticfiles import staticFiles
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
