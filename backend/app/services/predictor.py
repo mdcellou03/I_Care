@@ -4,7 +4,7 @@ checks and recommendations.
 This is the only backend file that touches ML code, so changes on the ML side
 should only ever need edits here.
 """
-
+import pathlib
 import platform
 import sys
 from functools import lru_cache
@@ -36,6 +36,12 @@ def get_learner():
 
     if not MODEL_PATH.is_file():
         raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+    
+    # The model was exported on Windows, so its pickle stores paths as WindowsPath.
+    # Linux (where we deploy) can't create those, so load them as PosixPath instead.
+    # Python 3.13 pickles reference pathlib._local, so patch it there.
+    if platform.system() != "Windows":
+        pathlib._local.WindowsPath = pathlib.PosixPath   
 
     return load_learner(MODEL_PATH, cpu=True)
 
