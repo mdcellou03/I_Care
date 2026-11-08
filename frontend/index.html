@@ -32,17 +32,18 @@
       <section class="screening" id="upload">
         <div class="panel upload-panel">
           <div class="section-heading"><div><span class="eyebrow">YOUR PRIVATE SCREENING</span><h2>Upload your eye image</h2><p>Use a clear, well-lit, close-up photo of one eye, looking straight at the camera.</p></div><span class="step-badge">01 <span>/ 02</span></span></div>
-          <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+          <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden />
+          <input id="camera-input" type="file" accept="image/*" capture="environment" hidden />
           <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Choose or drop an eye image">
             <div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 15.5v2A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-2"/></svg></div>
             <strong id="drop-title">Drag &amp; drop your image here</strong><span class="drop-or">or</span>
-            <button class="button button-secondary" id="choose-button" type="button">Choose image</button>
-            <span class="file-hint">JPG, PNG or WEBP · up to 10 MB</span>
+            <span class="dropzone-actions"><button class="button button-secondary" id="choose-button" type="button">Choose image</button><button class="button button-secondary" id="camera-button" type="button">Take photo</button></span>
+            <span class="file-hint">JPG, PNG, WEBP or HEIC · up to 15 MB</span>
           </div>
           <div class="preview-row" id="preview-row" hidden><img id="preview-image" alt="Selected eye image preview" /><div class="preview-copy"><strong id="file-name"></strong><span id="file-size"></span></div><button id="remove-button" class="text-button" type="button">Remove</button></div>
           <p id="upload-error" class="error-message" role="alert" hidden></p>
           <button id="analyze-button" class="button analyze-button" type="button" disabled><span aria-hidden="true">◎</span><span id="analyze-label">Analyze image</span></button>
-          <p class="privacy-note"><span aria-hidden="true">⌑</span> Your image is processed for this request and is not saved by this page.</p>
+          <p class="privacy-note"><span aria-hidden="true">⌑</span> Your photo is analysed in memory and never stored, by this page or our server.</p>
         </div>
 
         <section class="panel results-panel" aria-live="polite" aria-labelledby="results-title">
@@ -52,7 +53,8 @@
             <div class="prediction-card"><div><span class="result-label">MODEL PREDICTION</span><h3 id="prediction-title"></h3></div><div class="confidence"><strong id="confidence-value"></strong><span>model confidence</span></div></div>
             <p id="recommendation-description" class="recommendation-copy"></p>
             <div id="next-steps-wrap" class="next-steps-wrap"><h4>Suggested next steps</h4><ul id="next-steps"></ul></div>
-            <div id="scores-wrap" class="scores-wrap"><h4>Other model scores</h4><div id="scores-list"></div></div>
+            <div id="scores-wrap" class="scores-wrap"><h4>All model scores</h4><div id="scores-list"></div></div>
+            <p id="low-confidence" class="urgent-warning" hidden>The model isn't confident about this photo. Try retaking it close up, in good even light, with the eye in focus.</p>
             <p id="urgent-warning" class="urgent-warning" hidden></p>
             <p id="result-disclaimer" class="result-disclaimer"></p>
             <section class="care-finder" aria-labelledby="care-finder-title">
@@ -91,6 +93,14 @@
         <aside class="disclaimer-card"><span class="disclaimer-icon" aria-hidden="true">!</span><div><h3>Important disclaimer</h3><p>ICheck is an educational student prototype, not a clinically validated diagnostic tool. Its results are not medical advice. If you have any concerns about your eyes, please consult a qualified eye-care professional.</p></div></aside>
       </section>
     </main>
+
+    <dialog id="camera-dialog" class="camera-dialog" aria-labelledby="camera-title">
+      <div class="section-heading"><div><span class="eyebrow">WEBCAM CAPTURE</span><h2 id="camera-title">Take a photo of your eye</h2><p>Hold your eye close to the camera in good, even light, then select Capture.</p></div></div>
+      <video id="camera-video" class="camera-video" autoplay playsinline muted></video>
+      <p id="camera-error" class="error-message" role="alert" hidden></p>
+      <div class="camera-actions"><button id="camera-cancel" class="button button-secondary" type="button">Cancel</button><button id="camera-capture" class="button button-primary" type="button" disabled>Capture</button></div>
+      <p class="privacy-note">The camera is only on while this window is open. Nothing is recorded or uploaded until you select Analyze image.</p>
+    </dialog>
 
     <footer><a class="brand footer-brand" href="#home"><span class="brand-mark" aria-hidden="true">◎</span><span>ICheck</span></a><span>An AI-assisted eye-health screening prototype for awareness.</span><a href="#home" class="back-top">Back to top ↑</a></footer>
   </body>
