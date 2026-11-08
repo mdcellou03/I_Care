@@ -318,7 +318,7 @@
           locationStatus.textContent = `${error.message} You can still use Google Maps for nearby options.`;
         }).finally(() => {
           nearbyButton.disabled = false;
-          nearbyButton.textContent = "Optometrist near me";
+          nearbyButton.textContent = "Find optometrists near me";
         });
       },
       () => {
