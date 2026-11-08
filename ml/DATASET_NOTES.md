@@ -2,19 +2,21 @@
 
 ## Combined experimental task
 
-The planned class folders are `Healthy`, `Jaundice`, `Cataract`, `Conjunctivitis`, and `Uveitis`.
+The planned class folders are `Healthy`, `Jaundice`, `Cataract`, `Conjunctivitis`, `Uveitis`, and `Bulging_Eyes`.
 
 - The existing Hugging Face dataset supplies `Healthy` and `Jaundice` visible-eye photos.
 - The Kaggle cataract dataset is mapped by `cataract.py`: Kaggle `normal`/`healthy` becomes project `Healthy`; Kaggle `cataract` becomes `Cataract`.
+- The second Kaggle cataract dataset (`hemooredaoo/cataract`) contributes the selected `processed_images/test/cataract` images to the same project `Cataract` folder. Its source test folder is treated as an image source only; the combined data is re-split by `preprocess.py`.
 - The two conjunctivitis sources are mapped by `conjunctivitis.py` into `data/conjunctivitis_images/Conjunctivitis`: Kaggle `Dataset/infected_eye` and the second dataset's `Conjunctivitis` class folder.
 - The Orvile Kaggle `Uveitis` folder is mapped by `uveitis.py` into `data/uveitis_images/Uveitis`.
+- The Kaggle `mohamedsayed12/eye-disease-dataset` `Bulging_Eyes` folder is mapped by `bulging_eyes.py` into `data/bulging_eyes_images/Bulging_Eyes`. It remains a separate class; it is not merged with Cataract.
 - Before adding conjunctivitis, the prepared set had 436 Healthy, 145 Jaundice, and 168 Cataract images (749 total), with 2 exact duplicates grouped. Rebuild to get the new counts; `preprocess.py` prints counts per class and split.
 - The conjunctivitis extraction found 177 readable images in the first source and 357 in the second; one byte-identical file was skipped. Preprocessing then grouped one additional exact-pixel duplicate, leaving 532 Conjunctivitis images.
 - Before adding Uveitis, the four-class output had 1,281 images.
-- Uveitis extraction found 223 readable images with no exact duplicate files. The current five-class output has 1,504 images: Healthy 436, Jaundice 145, Cataract 168, Conjunctivitis 532, and Uveitis 223.
+- Uveitis extraction found 223 readable images with no exact duplicate files. Before adding Bulging_Eyes, the five-class output had 1,504 images: Healthy 436, Jaundice 145, Cataract 168, Conjunctivitis 532, and Uveitis 223.
 - Current seed-42 split counts in that class order: train 304 / 101 / 116 / 372 / 155; valid 66 / 22 / 26 / 80 / 34; test 66 / 22 / 26 / 80 / 34.
 - These are visible-eye photographs, not retinal/fundus images. They come from different sources and may have different image styles; the classifier may learn source or capture differences. Inspect examples and class counts before training.
-- Check the license and provenance for each Kaggle source on its dataset page before redistribution: [cataract](https://www.kaggle.com/datasets/nandanp6/cataract-image-dataset), [conjunctivitis source 1](https://www.kaggle.com/datasets/alisofiya/conjunctivitis), and [conjunctivitis source 2](https://www.kaggle.com/datasets/orvile/eye-diseases-classification).
+- Check the license and provenance for each Kaggle source on its dataset page before redistribution: [cataract source 1](https://www.kaggle.com/datasets/nandanp6/cataract-image-dataset), [cataract source 2](https://www.kaggle.com/datasets/hemooredaoo/cataract), [conjunctivitis source 1](https://www.kaggle.com/datasets/alisofiya/conjunctivitis), [conjunctivitis source 2](https://www.kaggle.com/datasets/orvile/eye-diseases-classification), and [bulging-eyes source](https://www.kaggle.com/datasets/mohamedsayed12/eye-disease-dataset).
 
 ## Existing jaundice source
 
@@ -30,13 +32,14 @@ Install requirements, download/map the Kaggle classes, then rebuild the combined
 
 ```bash
 python -m pip install -r requirement.txt
-python cataract.py
+python cataract.py --rebuild
 python conjunctivitis.py
 python uveitis.py
+python bulging_eyes.py
 python preprocess.py --rebuild
 ```
 
-`cataract.py` saves normalized Kaggle images under `data/cataract_images/Healthy` and `data/cataract_images/Cataract`. `conjunctivitis.py` saves images from both specified Kaggle folders under `data/conjunctivitis_images/Conjunctivitis`. `uveitis.py` saves the selected Uveitis images under `data/uveitis_images/Uveitis`. `preprocess.py` combines these with the saved Hugging Face images and writes the FastAI layout to `data/processed/{train,valid,test}/{Healthy,Jaundice,Cataract,Conjunctivitis,Uveitis}`. It keeps the previous output as a local backup when rebuilding.
+`cataract.py` merges the current and new Kaggle sources under `data/cataract_images/Healthy` and `data/cataract_images/Cataract`. `conjunctivitis.py` saves images from both specified Kaggle folders under `data/conjunctivitis_images/Conjunctivitis`. `uveitis.py` saves the selected Uveitis images under `data/uveitis_images/Uveitis`. `bulging_eyes.py` saves the Kaggle `Bulging_Eyes` folder under `data/bulging_eyes_images/Bulging_Eyes`. `preprocess.py` combines these with the saved Hugging Face images and writes the FastAI layout to `data/processed/{train,valid,test}/{Healthy,Jaundice,Cataract,Conjunctivitis,Uveitis,Bulging_Eyes}`. It keeps the previous output as a local backup when rebuilding.
 
 The preprocessing uses seed 42 and groups exact duplicate decoded pixels before splitting. Patient IDs are not available, and near-duplicates may remain. It makes a new 70/15/15 split across all examples, so any source-provided train/test separation is not preserved. Treat model results as experimental, not as clinical validation or diagnosis.
 
