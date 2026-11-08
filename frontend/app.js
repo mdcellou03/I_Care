@@ -1,6 +1,7 @@
 (() => {
   const API_URL = `${window.ICHECK_API_URL || ""}/api/v1/analyze`;
   const input = document.querySelector("#file-input");
+  const cameraInput = document.querySelector("#camera-input");
   const dropzone = document.querySelector("#dropzone");
   const chooseButton = document.querySelector("#choose-button");
   const analyzeButton = document.querySelector("#analyze-button");
@@ -13,8 +14,10 @@
   const locationStatus = document.querySelector("#location-status");
   const providerList = document.querySelector("#provider-list");
   const googleMapsSearch = document.querySelector("#google-maps-search");
-  const MAX_BYTES = 10 * 1024 * 1024;
-  const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_BYTES = 15 * 1024 * 1024;
+  const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+  // Some browsers report HEIC files with an empty type, so fall back to the extension.
+  const isAccepted = (file) => ACCEPTED.includes(file.type) || /\.(heic|heif)$/i.test(file.name);
   let selectedFile = null;
   let previewUrl = null;
 
@@ -26,8 +29,8 @@
   function selectFile(file) {
     setError();
     if (!file) return;
-    if (!ACCEPTED.includes(file.type)) return setError("Please choose a JPG, PNG or WEBP image.");
-    if (file.size > MAX_BYTES) return setError("This image is over 10 MB. Please choose a smaller file.");
+    if (!isAccepted(file)) return setError("Please choose a JPG, PNG, WEBP or HEIC image.");
+    if (file.size > MAX_BYTES) return setError("This image is over 15 MB. Please choose a smaller file.");
     selectedFile = file;
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = URL.createObjectURL(file);
@@ -46,12 +49,96 @@
     if (event.target === dropzone && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); input.click(); }
   });
   input.addEventListener("change", () => selectFile(input.files?.[0]));
+  // Phones (touch screens) use the native camera app via capture="environment", which gives the
+  // best photo. Laptops ignore that attribute, so they get a webcam preview dialog instead.
+  // getUserMedia only exists on secure pages (https or localhost); otherwise fall back to a file picker.
+  const cameraDialog = document.querySelector("#camera-dialog");
+  const cameraVideo = document.querySelector("#camera-video");
+  const cameraCapture = document.querySelector("#camera-capture");
+  const cameraError = document.querySelector("#camera-error");
+  const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+  const canUseWebcam = Boolean(navigator.mediaDevices?.getUserMedia) && typeof cameraDialog.showModal === "function";
+  let cameraStream = null;
+
+  const setCameraError = (message = "") => {
+    cameraError.textContent = message;
+    cameraError.hidden = !message;
+  };
+
+  function stopCamera() {
+    cameraStream?.getTracks().forEach((track) => track.stop());
+    cameraStream = null;
+    cameraVideo.srcObject = null;
+    cameraCapture.disabled = true;
+  }
+
+  // Turn the camera off explicitly instead of relying only on the dialog's "close" event,
+  // which some browsers don't fire reliably.
+  function closeCamera() {
+    stopCamera();
+    if (cameraDialog.open) cameraDialog.close();
+  }
+
+  async function openWebcam() {
+    setCameraError();
+    cameraDialog.showModal();
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      // The dialog may have been closed while the permission prompt was open.
+      if (!cameraDialog.open) return stopCamera();
+      cameraVideo.srcObject = cameraStream;
+      await cameraVideo.play();
+      cameraCapture.disabled = false;
+    } catch (error) {
+      stopCamera();
+      const messages = {
+        NotAllowedError: "Camera access was blocked. Allow it from the camera icon in your address bar, or use Choose image.",
+        NotFoundError: "No camera was found on this device. Please use Choose image instead.",
+        NotReadableError: "Your camera is being used by another app. Close it and try again.",
+      };
+      setCameraError(messages[error.name] || "The camera couldn't be started. Please use Choose image instead.");
+    }
+  }
+
+  function captureFrame() {
+    if (!cameraVideo.videoWidth) return;
+    cameraCapture.disabled = true; // encoding can take a moment; avoid double captures
+    const canvas = document.createElement("canvas");
+    canvas.width = cameraVideo.videoWidth;
+    canvas.height = cameraVideo.videoHeight;
+    // Draw the raw frame (not the mirrored preview), so the photo matches what the camera sees.
+    canvas.getContext("2d").drawImage(cameraVideo, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        cameraCapture.disabled = false;
+        return setCameraError("The photo couldn't be captured. Please try again.");
+      }
+      closeCamera();
+      selectFile(new File([blob], `webcam-${Date.now()}.jpg`, { type: "image/jpeg" }));
+    }, "image/jpeg", 0.92);
+  }
+
+  document.querySelector("#camera-button").addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (!isTouchDevice && canUseWebcam) openWebcam();
+    else cameraInput.click();
+  });
+  cameraInput.addEventListener("change", () => selectFile(cameraInput.files?.[0]));
+  cameraCapture.addEventListener("click", captureFrame);
+  document.querySelector("#camera-cancel").addEventListener("click", closeCamera);
+  // Escape closes the dialog without our buttons; "cancel" and "close" cover that case.
+  cameraDialog.addEventListener("cancel", stopCamera);
+  cameraDialog.addEventListener("close", stopCamera);
   ["dragenter", "dragover"].forEach((name) => dropzone.addEventListener(name, (event) => { event.preventDefault(); dropzone.classList.add("dragging"); }));
   ["dragleave", "drop"].forEach((name) => dropzone.addEventListener(name, (event) => { event.preventDefault(); dropzone.classList.remove("dragging"); }));
   dropzone.addEventListener("drop", (event) => selectFile(event.dataTransfer.files?.[0]));
   document.querySelector("#remove-button").addEventListener("click", () => {
     selectedFile = null;
     input.value = "";
+    cameraInput.value = "";
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = null;
     previewImage.removeAttribute("src");
@@ -78,7 +165,7 @@
     const scores = Object.entries(data.scores || {}).sort((a, b) => b[1] - a[1]);
     const scoresList = document.querySelector("#scores-list");
     scoresList.replaceChildren();
-    scores.slice(0, 4).forEach(([label, value]) => {
+    scores.forEach(([label, value]) => {
       const row = document.createElement("div"); row.className = "score-row";
       const name = document.createElement("span"); name.textContent = label.replaceAll("_", " ");
       const percentage = document.createElement("strong"); percentage.textContent = `${Math.round(value * 100)}%`;
@@ -87,6 +174,7 @@
       row.append(name, percentage, track); scoresList.append(row);
     });
     document.querySelector("#scores-wrap").hidden = !scores.length;
+    document.querySelector("#low-confidence").hidden = !data.low_confidence;
     const urgent = document.querySelector("#urgent-warning");
     urgent.textContent = recommendation.urgent_warning || "";
     urgent.hidden = !urgent.textContent;
@@ -254,7 +342,7 @@
     try {
       const response = await fetch(API_URL, { method: "POST", body: form });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.detail || "The image could not be analyzed. Please try a different photo.");
+      if (!response.ok) throw new Error(data.message || data.detail || "The image could not be analyzed. Please try a different photo.");
       showResults(data);
     } catch (error) {
       document.querySelector("#result-status").innerHTML = '<span class="status-dot"></span> Unable to analyze';
