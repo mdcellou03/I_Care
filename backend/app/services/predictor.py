@@ -21,8 +21,6 @@ from app.config import ML_DIR, MODEL_PATH, REQUIRED_PYTHON
 sys.path.append(str(ML_DIR.parent))
 from ml.recommendation import get_recommendation  # noqa: E402
 from ml.validate_image import check_image_quality  # noqa: E402
-from recommendation import get_recommendation  # noqa: E402
-from validate_image import check_image_quality  # noqa: E402
 
 @lru_cache(maxsize=1)
 def get_learner():

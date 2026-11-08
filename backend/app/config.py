@@ -18,6 +18,13 @@ _DEFAULT_ML_DIR = Path(__file__).resolve().parents[2] / "ml"
 ML_DIR = Path(os.getenv("EYECHECK_ML_DIR", _DEFAULT_ML_DIR)).resolve()
 MODEL_PATH = Path(os.getenv("EYECHECK_MODEL_PATH", ML_DIR / "models" / "eye_model.pkl")).resolve()
 
+# The static frontend (index.html, app.js, styles.css). FastAPI serves it at "/",
+# so the site and the API share one URL and the browser never makes a cross-origin call.
+FRONTEND_DIR = Path(
+    os.getenv("EYECHECK_FRONTEND_DIR", Path(__file__).resolve().parents[2] / "frontend")
+).resolve()
+
+
 # The model is a pickle exported by the ML side on Python 3.13; it only loads on the same minor version.
 REQUIRED_PYTHON = (3, 13)
 

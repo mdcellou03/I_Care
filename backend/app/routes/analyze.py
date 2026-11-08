@@ -23,6 +23,7 @@ from app.services import predictor
 
 # Teaches Pillow to open HEIC/HEIF, the default photo format on iPhones.
 register_heif_opener()
+router = APIRouter(prefix="/api/v1", tags=["analysis"])
 
 # Specific advice for each reason ml/validate_image.py can return.
 RETAKE_TIPS = {
