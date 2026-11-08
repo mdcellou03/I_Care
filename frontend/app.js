@@ -8,6 +8,11 @@
   const errorMessage = document.querySelector("#upload-error");
   const previewRow = document.querySelector("#preview-row");
   const previewImage = document.querySelector("#preview-image");
+  const nearbyButton = document.querySelector("#find-nearby-button");
+  const locationStatus = document.querySelector("#location-status");
+  const mapsLink = document.querySelector("#maps-link");
+  const manualLocationForm = document.querySelector("#manual-location-form");
+  const locationQuery = document.querySelector("#location-query");
   const MAX_BYTES = 10 * 1024 * 1024;
   const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
   let selectedFile = null;
@@ -88,6 +93,46 @@
     document.querySelector("#result-disclaimer").textContent = data.disclaimer || recommendation.disclaimer || "This educational screening is not a medical diagnosis.";
     document.querySelector("#result-status").innerHTML = '<span class="status-dot"></span> Analysis complete';
   }
+
+  function setMapsSearch(query, status) {
+    mapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    mapsLink.hidden = false;
+    locationStatus.textContent = status;
+  }
+
+  nearbyButton.addEventListener("click", () => {
+    mapsLink.hidden = true;
+    locationStatus.textContent = "";
+    if (!navigator.geolocation) {
+      locationStatus.textContent = "Location is not available in this browser. Search by city or postal code below.";
+      return;
+    }
+
+    nearbyButton.disabled = true;
+    nearbyButton.textContent = "Finding your location…";
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const location = `${coords.latitude},${coords.longitude}`;
+        setMapsSearch(`eye doctor near ${location}`, "Location found. Open Maps to view nearby eye-care options.");
+        nearbyButton.disabled = false;
+        nearbyButton.textContent = "Use my location";
+      },
+      () => {
+        locationStatus.textContent = "We couldn’t access your location. Search by city or postal code below instead.";
+        nearbyButton.disabled = false;
+        nearbyButton.textContent = "Try location again";
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+    );
+  });
+
+  manualLocationForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const place = locationQuery.value.trim();
+    if (!place) return;
+    mapsLink.hidden = true;
+    setMapsSearch(`eye doctor near ${place}`, "Search results are ready in Maps.");
+  });
 
   analyzeButton.addEventListener("click", async () => {
     if (!selectedFile || analyzeButton.disabled) return;

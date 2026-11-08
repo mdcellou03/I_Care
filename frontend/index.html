@@ -53,6 +53,23 @@
             <div id="scores-wrap" class="scores-wrap"><h4>Other model scores</h4><div id="scores-list"></div></div>
             <p id="urgent-warning" class="urgent-warning" hidden></p>
             <p id="result-disclaimer" class="result-disclaimer"></p>
+            <section class="care-finder" aria-labelledby="care-finder-title">
+              <div class="care-finder-copy">
+                <span class="eyebrow">NEXT STEP</span>
+                <h3 id="care-finder-title">Want a professional opinion?</h3>
+                <p>AI results can be wrong. Find an eye-care professional near you if you have concerns.</p>
+              </div>
+              <button id="find-nearby-button" class="button button-secondary" type="button">Use my location</button>
+              <p id="location-status" class="location-status" role="status" aria-live="polite"></p>
+              <a id="maps-link" class="maps-link" target="_blank" rel="noopener noreferrer" hidden>Open nearby eye-care results in Maps ↗</a>
+              <form id="manual-location-form" class="manual-location-form">
+                <label for="location-query">Or search by city or postal code</label>
+                <div class="manual-location-controls">
+                  <input id="location-query" type="search" autocomplete="postal-code" placeholder="City or postal code" required />
+                  <button class="button button-secondary" type="submit">Search</button>
+                </div>
+              </form>
+            </section>
           </div>
           <div id="api-hint" class="api-hint" hidden><strong>Couldn’t reach the analysis API.</strong><span>Start the FastAPI backend and try again. This page sends the image to <code>/api/v1/analyze</code>.</span></div>
         </section>
