@@ -1,3 +1,9 @@
-.venv/
+# Python
 __pycache__/
+*.pyc
+.venv/
 .env
+
+# Dataset downloads and generated image exports stay local (dataset license/size).
+/data/
+ml/data/
