@@ -32,7 +32,6 @@ RECOMMENDATIONS = {
         ],
         "urgency": "prompt"
     },
-
     "Cataract": {
         "title": "Possible Cataract",
         "description": (
@@ -121,6 +120,7 @@ RECOMMENDATIONS = {
         ],
         "urgency": "urgent"
     }
+
 }
 
 
@@ -135,21 +135,7 @@ def get_recommendation(prediction):
         dict: Information and recommended next steps.
     """
 
-    normalized_prediction = " ".join(
-        str(prediction).replace("_", " ").strip().casefold().split()
-    )
-    if normalized_prediction == "bulging eye":
-        normalized_prediction = "bulging eyes"
-
-    info = next(
-        (
-            recommendation
-            for label, recommendation in RECOMMENDATIONS.items()
-            if " ".join(label.replace("_", " ").casefold().split())
-            == normalized_prediction
-        ),
-        None,
-    )
+    info = RECOMMENDATIONS.get(prediction)
 
     if info is None:
         return {

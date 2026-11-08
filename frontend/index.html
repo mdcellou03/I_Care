@@ -9,7 +9,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
     <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
     <script src="./app.js" defer></script>
   </head>
   <body>
@@ -53,25 +55,27 @@
             <div id="scores-wrap" class="scores-wrap"><h4>Other model scores</h4><div id="scores-list"></div></div>
             <p id="urgent-warning" class="urgent-warning" hidden></p>
             <p id="result-disclaimer" class="result-disclaimer"></p>
-            <section class="care-finder" aria-labelledby="care-finder-title">
-              <div class="care-finder-copy">
-                <span class="eyebrow">NEXT STEP</span>
-                <h3 id="care-finder-title">Want a professional opinion?</h3>
-                <p>AI results can be wrong. Find an eye-care professional near you if you have concerns.</p>
-              </div>
-              <button id="find-nearby-button" class="button button-secondary" type="button">Use my location</button>
-              <p id="location-status" class="location-status" role="status" aria-live="polite"></p>
-              <a id="maps-link" class="maps-link" target="_blank" rel="noopener noreferrer" hidden>Open nearby eye-care results in Maps ↗</a>
-              <form id="manual-location-form" class="manual-location-form">
-                <label for="location-query">Or search by city or postal code</label>
-                <div class="manual-location-controls">
-                  <input id="location-query" type="search" autocomplete="postal-code" placeholder="City or postal code" required />
-                  <button class="button button-secondary" type="submit">Search</button>
-                </div>
-              </form>
-            </section>
           </div>
           <div id="api-hint" class="api-hint" hidden><strong>Couldn’t reach the analysis API.</strong><span>Start the FastAPI backend and try again. This page sends the image to <code>/api/v1/analyze</code>.</span></div>
+        </section>
+        <section class="panel provider-panel" aria-labelledby="care-finder-title">
+          <div class="provider-panel-heading">
+            <div class="care-finder-copy">
+              <span class="eyebrow">LOCAL EYE CARE</span>
+              <h2 id="care-finder-title">Find an optometrist near me</h2>
+              <p>AI results can be wrong. View nearby optometrists and ophthalmologists on the map.</p>
+            </div>
+            <button id="find-nearby-button" class="button button-secondary" type="button">Optometrist near me</button>
+          </div>
+          <p class="location-note">Your approximate location is used for this search and is not saved by ICheck.</p>
+          <section id="nearby-map-section" class="nearby-map-section" aria-labelledby="nearby-map-title" hidden>
+            <div class="nearby-map-heading"><div><span class="eyebrow">LOCAL EYE CARE</span><h3 id="nearby-map-title">Nearby eye-care providers</h3></div><span class="map-radius">Within 5 km</span></div>
+            <p id="location-status" class="location-status" role="status" aria-live="polite">Finding your location…</p>
+            <div id="nearby-map" class="nearby-map" role="region" aria-label="Map of nearby eye-care providers"></div>
+            <p class="map-attribution">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a></p>
+            <div id="provider-list" class="provider-list"></div>
+            <a id="google-maps-search" class="maps-link" target="_blank" rel="noopener noreferrer" hidden>View nearby optometrists in Google Maps ↗</a>
+          </section>
         </section>
       </section>
 
