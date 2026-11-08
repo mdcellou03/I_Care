@@ -33,7 +33,7 @@ learn = vision_learner(
 )
 
 # Train classifier head with backbone frozen
-learn.fit_one_cycle(1, 1e-3)
+learn.fine_tune(5)
 
 # Export model
 learn.export(MODEL_PATH.resolve() / "eye_model.pkl")
