@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fbf8ed" />
+    <meta name="description" content="ICheck is an educational, AI-assisted eye-health screening prototype." />
+    <title>ICheck — Explore Eye Health</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#home" aria-label="ICheck home"><span class="brand-mark" aria-hidden="true">◎</span><span>ICheck</span></a>
+      <nav aria-label="Main navigation"><a href="#home">Home</a><a href="#how-it-works">How It Works</a><a href="#about">About</a></nav>
+      <span class="prototype-pill"><span class="status-dot"></span> Educational Prototype</span>
+    </header>
+
+    <main>
+      <section class="hero" id="home">
+        <span class="eyebrow">AI-ASSISTED SCREENING</span>
+        <h1>A smarter way to explore<br class="desktop-break" /> eye health <span aria-hidden="true">👀</span></h1>
+        <p>ICheck uses image analysis to highlight patterns in eye photos, helping raise awareness of eye health in a simple, approachable way.</p>
+        <a class="button button-primary hero-button" href="#upload">Get Started <span aria-hidden="true">✦</span></a>
+      </section>
+
+      <section class="screening" id="upload">
+        <div class="panel upload-panel">
+          <div class="section-heading"><div><span class="eyebrow">YOUR PRIVATE SCREENING</span><h2>Upload your eye image</h2><p>Use a clear, well-lit, close-up photo of one eye, looking straight at the camera.</p></div><span class="step-badge">01 <span>/ 02</span></span></div>
+          <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+          <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Choose or drop an eye image">
+            <div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 15.5v2A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-2"/></svg></div>
+            <strong id="drop-title">Drag &amp; drop your image here</strong><span class="drop-or">or</span>
+            <button class="button button-secondary" id="choose-button" type="button">Choose image</button>
+            <span class="file-hint">JPG, PNG or WEBP · up to 10 MB</span>
+          </div>
+          <div class="preview-row" id="preview-row" hidden><img id="preview-image" alt="Selected eye image preview" /><div class="preview-copy"><strong id="file-name"></strong><span id="file-size"></span></div><button id="remove-button" class="text-button" type="button">Remove</button></div>
+          <p id="upload-error" class="error-message" role="alert" hidden></p>
+          <button id="analyze-button" class="button analyze-button" type="button" disabled><span aria-hidden="true">◎</span><span id="analyze-label">Analyze image</span></button>
+          <p class="privacy-note"><span aria-hidden="true">⌑</span> Your image is processed for this request and is not saved by this page.</p>
+        </div>
+
+        <section class="panel results-panel" aria-live="polite" aria-labelledby="results-title">
+          <div class="results-heading"><div><span class="eyebrow">YOUR SCREENING</span><h2 id="results-title">Analysis results</h2></div><span id="result-status" class="result-status"><span class="status-dot"></span> Awaiting image</span></div>
+          <div id="empty-results" class="empty-state"><span class="empty-icon" aria-hidden="true">◎</span><h3>No results yet</h3><p>Upload an eye image and select Analyze Image<br class="desktop-break" /> to see a prediction here.</p></div>
+          <div id="result-content" hidden>
+            <div class="prediction-card"><div><span class="result-label">MODEL PREDICTION</span><h3 id="prediction-title"></h3></div><div class="confidence"><strong id="confidence-value"></strong><span>model confidence</span></div></div>
+            <p id="recommendation-description" class="recommendation-copy"></p>
+            <div id="next-steps-wrap" class="next-steps-wrap"><h4>Suggested next steps</h4><ul id="next-steps"></ul></div>
+            <div id="scores-wrap" class="scores-wrap"><h4>Other model scores</h4><div id="scores-list"></div></div>
+            <p id="urgent-warning" class="urgent-warning" hidden></p>
+            <p id="result-disclaimer" class="result-disclaimer"></p>
+          </div>
+          <div id="api-hint" class="api-hint" hidden><strong>Couldn’t reach the analysis API.</strong><span>Start the FastAPI backend and try again. This page sends the image to <code>/api/v1/analyze</code>.</span></div>
+        </section>
+      </section>
+
+      <section class="how-section" id="how-it-works">
+        <div class="section-title"><span class="eyebrow">A SIMPLE THREE-STEP FLOW</span><h2>How it works</h2></div>
+        <div class="steps-grid">
+          <article class="step-card"><span class="step-icon">↥</span><span class="step-number">STEP 1</span><h3>Upload an eye image</h3><p>Select a clear, close-up photo of your eye.</p></article>
+          <article class="step-card"><span class="step-icon">◎</span><span class="step-number">STEP 2</span><h3>AI-assisted analysis</h3><p>The model examines visual patterns in the image.</p></article>
+          <article class="step-card"><span class="step-icon">✓</span><span class="step-number">STEP 3</span><h3>Review the results</h3><p>See the experimental prediction and confidence.</p></article>
+        </div>
+      </section>
+
+      <section class="about-section" id="about">
+        <div class="about-copy"><span class="eyebrow">ABOUT THE PROJECT</span><h2>Eye health, made easier to explore.</h2><p>ICheck is a student project exploring how machine learning can support eye-health awareness through accessible, image-based screening.</p></div>
+        <aside class="disclaimer-card"><span class="disclaimer-icon" aria-hidden="true">!</span><div><h3>Important disclaimer</h3><p>ICheck is an educational student prototype, not a clinically validated diagnostic tool. Its results are not medical advice. If you have any concerns about your eyes, please consult a qualified eye-care professional.</p></div></aside>
+      </section>
+    </main>
+
+    <footer><a class="brand footer-brand" href="#home"><span class="brand-mark" aria-hidden="true">◎</span><span>ICheck</span></a><span>An AI-assisted eye-health screening prototype for awareness.</span><a href="#home" class="back-top">Back to top ↑</a></footer>
+  </body>
+</html>
