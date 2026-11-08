@@ -36,21 +36,26 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 
 
 def find_subpath(root: Path, wanted: str) -> Path:
-    """Find a selected Kaggle folder without depending on path capitalization."""
+    """Find a selected Kaggle folder, allowing wrapper folders around the dataset."""
     parts = Path(wanted).parts
-    candidates = [root]
-    for part in parts:
-        next_candidates = []
-        for parent in candidates:
-            if not parent.is_dir():
-                continue
-            next_candidates.extend(
-                child for child in parent.iterdir()
-                if child.is_dir() and child.name.casefold() == part.casefold()
+    # KaggleHub may put the archive contents in a named wrapper directory, so
+    # the requested path is not always relative to the version cache root.
+    for first_match in root.rglob(parts[0]):
+        if not first_match.is_dir() or first_match.name.casefold() != parts[0].casefold():
+            continue
+        candidate = first_match
+        for part in parts[1:]:
+            candidate = next(
+                (
+                    child for child in candidate.iterdir()
+                    if child.is_dir() and child.name.casefold() == part.casefold()
+                ),
+                None,
             )
-        candidates = next_candidates
-    if candidates:
-        return candidates[0]
+            if candidate is None:
+                break
+        if candidate is not None:
+            return candidate
     raise FileNotFoundError(f"Could not find {wanted!r} inside downloaded dataset {root}.")
 
 
