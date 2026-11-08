@@ -36,6 +36,6 @@ learn = vision_learner(
 learn.fit_one_cycle(1, 1e-3)
 
 # Export model
-learn.export(MODEL_PATH / "eye_model.pkl")
+learn.export(MODEL_PATH.resolve() / "eye_model.pkl")
 
 print("Model saved to models/eye_model.pkl")
