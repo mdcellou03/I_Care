@@ -22,7 +22,7 @@ LOW_CONFIDENCE_THRESHOLD = 0.6
 
 # Frontend origins allowed to call the API from a browser.
 # Add e.g. "http://192.168.1.23:3000" when opening the frontend from a phone on the same Wi-Fi.
-ALLOWED_ORIGINS = ["http://localhost:3000"]
+ALLOWED_ORIGINS = ["http://localhost:5500"]
 
 DISCLAIMER = (
     "This is an experimental result from a student prototype, not a medical diagnosis. "
