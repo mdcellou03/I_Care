@@ -20,6 +20,38 @@ class ICheckHandler(SimpleHTTPRequestHandler):
             return
 
         body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        if self.path == "/api/nearby-optometrists":
+            request = Request(
+                "https://overpass-api.de/api/interpreter",
+                data=body,
+                headers={
+                    "Content-Type": self.headers.get("Content-Type", "application/x-www-form-urlencoded"),
+                    "User-Agent": "ICheck educational eye-care finder",
+                    "Accept": "application/json",
+                },
+                method="POST",
+            )
+            try:
+                with urlopen(request, timeout=30) as response:
+                    payload = response.read()
+                    status = response.status
+                    content_type = response.headers.get("Content-Type", "application/json")
+            except HTTPError as error:
+                payload = error.read()
+                status = error.code
+                content_type = error.headers.get("Content-Type", "application/json")
+            except (URLError, TimeoutError) as error:
+                payload = b'{"detail":"Nearby provider search is temporarily unavailable."}'
+                status = 502
+                content_type = "application/json"
+
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
         request = Request(
             f"{BACKEND_URL}{self.path}",
             data=body,

@@ -8,6 +8,11 @@
   const errorMessage = document.querySelector("#upload-error");
   const previewRow = document.querySelector("#preview-row");
   const previewImage = document.querySelector("#preview-image");
+  const nearbyButton = document.querySelector("#find-nearby-button");
+  const nearbyMapSection = document.querySelector("#nearby-map-section");
+  const locationStatus = document.querySelector("#location-status");
+  const providerList = document.querySelector("#provider-list");
+  const googleMapsSearch = document.querySelector("#google-maps-search");
   const MAX_BYTES = 10 * 1024 * 1024;
   const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
   let selectedFile = null;
@@ -88,6 +93,154 @@
     document.querySelector("#result-disclaimer").textContent = data.disclaimer || recommendation.disclaimer || "This educational screening is not a medical diagnosis.";
     document.querySelector("#result-status").innerHTML = '<span class="status-dot"></span> Analysis complete';
   }
+
+  let nearbyMap = null;
+  let providerLayer = null;
+  let userMarker = null;
+
+  function googleMapsUrl(name, address, latitude, longitude) {
+    const query = [name, address].filter(Boolean).join(" ") || `optometrist near ${latitude},${longitude}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+
+  function ensureNearbyMap(latitude, longitude) {
+    if (!window.L) throw new Error("The map library did not load. Check your internet connection and try again.");
+    if (!nearbyMap) {
+      nearbyMap = L.map("nearby-map", { scrollWheelZoom: false }).setView([latitude, longitude], 13);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(nearbyMap);
+      providerLayer = L.layerGroup().addTo(nearbyMap);
+    } else {
+      nearbyMap.setView([latitude, longitude], 13);
+      providerLayer.clearLayers();
+    }
+    if (userMarker) nearbyMap.removeLayer(userMarker);
+    userMarker = L.circleMarker([latitude, longitude], {
+      radius: 8, color: "#ffffff", weight: 3, fillColor: "#5595df", fillOpacity: 1,
+    }).addTo(nearbyMap).bindPopup("Your approximate location");
+    window.setTimeout(() => nearbyMap.invalidateSize(), 120);
+  }
+
+  function providerAddress(tags) {
+    const street = [tags["addr:housenumber"], tags["addr:street"]].filter(Boolean).join(" ");
+    return [street, tags["addr:city"], tags["addr:postcode"]].filter(Boolean).join(", ");
+  }
+
+  function renderProviders(elements, userLatitude, userLongitude) {
+    providerLayer.clearLayers();
+    providerList.replaceChildren();
+    const providers = elements.map((element) => {
+      const tags = element.tags || {};
+      const point = element.center || element;
+      const latitude = Number(point.lat);
+      const longitude = Number(point.lon);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+      const name = tags.name || tags.operator || (tags.healthcare === "optometrist" ? "Optometrist" : "Eye-care provider");
+      const address = providerAddress(tags);
+      const distanceKm = L.latLng(userLatitude, userLongitude).distanceTo(L.latLng(latitude, longitude)) / 1000;
+      return { name, address, latitude, longitude, distanceKm };
+    }).filter(Boolean).sort((a, b) => a.distanceKm - b.distanceKm);
+
+    providers.forEach((provider) => {
+      const mapsUrl = googleMapsUrl(provider.name, provider.address, provider.latitude, provider.longitude);
+      const popup = document.createElement("div");
+      const popupName = document.createElement("strong");
+      popupName.textContent = provider.name;
+      const popupAddress = document.createElement("p");
+      popupAddress.textContent = provider.address || "Address not listed";
+      const popupLink = document.createElement("a");
+      popupLink.href = mapsUrl;
+      popupLink.target = "_blank";
+      popupLink.rel = "noopener noreferrer";
+      popupLink.textContent = "Open in Google Maps";
+      popup.append(popupName, popupAddress, popupLink);
+      L.marker([provider.latitude, provider.longitude]).addTo(providerLayer).bindPopup(popup);
+
+      const card = document.createElement("article");
+      card.className = "provider-card";
+      const details = document.createElement("div");
+      const title = document.createElement("h4");
+      title.textContent = provider.name;
+      const address = document.createElement("p");
+      address.textContent = provider.address || "Address not listed";
+      const distance = document.createElement("span");
+      distance.className = "provider-distance";
+      distance.textContent = `${provider.distanceKm.toFixed(1)} km away`;
+      details.append(title, address, distance);
+      const link = document.createElement("a");
+      link.href = mapsUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.className = "provider-directions";
+      link.textContent = "Google Maps ↗";
+      card.append(details, link);
+      providerList.append(card);
+    });
+
+    if (providers.length) {
+      locationStatus.textContent = `Found ${providers.length} nearby eye-care ${providers.length === 1 ? "provider" : "providers"}. Listings may be incomplete.`;
+      nearbyMap.fitBounds(L.featureGroup([
+        userMarker,
+        ...providers.map((provider) => L.marker([provider.latitude, provider.longitude])),
+      ]).getBounds().pad(0.18), { maxZoom: 14 });
+    } else {
+      locationStatus.textContent = "No nearby eye-care providers were found in OpenStreetMap. Try Google Maps for more listings.";
+      nearbyMap.setView([userLatitude, userLongitude], 13);
+    }
+    googleMapsSearch.href = googleMapsUrl("", "", userLatitude, userLongitude);
+    googleMapsSearch.hidden = false;
+  }
+
+  async function loadNearbyProviders(latitude, longitude) {
+    ensureNearbyMap(latitude, longitude);
+    locationStatus.textContent = "Looking for nearby optometrists and ophthalmologists…";
+    const query = `[out:json][timeout:20];(nwr(around:5000,${latitude},${longitude})["healthcare"~"^(optometrist|ophthalmologist)$"];nwr(around:5000,${latitude},${longitude})["healthcare:speciality"~"(ophthalmology|optometry)"];);out center tags;`;
+    const response = await fetch("/api/nearby-optometrists", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: new URLSearchParams({ data: query }),
+    });
+    if (!response.ok) throw new Error("Nearby provider search is temporarily unavailable.");
+    const data = await response.json();
+    renderProviders(data.elements || [], latitude, longitude);
+  }
+
+  nearbyButton.addEventListener("click", () => {
+    nearbyMapSection.hidden = false;
+    providerList.replaceChildren();
+    googleMapsSearch.hidden = true;
+    locationStatus.textContent = "Requesting your location…";
+    nearbyMapSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    nearbyButton.disabled = true;
+    nearbyButton.textContent = "Finding nearby eye care…";
+
+    if (!navigator.geolocation) {
+      locationStatus.textContent = "Location is unavailable in this browser. Open this page on localhost or HTTPS to use the map.";
+      nearbyButton.disabled = false;
+      nearbyButton.textContent = "Try again";
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        googleMapsSearch.href = googleMapsUrl("", "", coords.latitude, coords.longitude);
+        googleMapsSearch.hidden = false;
+        loadNearbyProviders(coords.latitude, coords.longitude).catch((error) => {
+          locationStatus.textContent = `${error.message} You can still use Google Maps for nearby options.`;
+        }).finally(() => {
+          nearbyButton.disabled = false;
+          nearbyButton.textContent = "Optometrist near me";
+        });
+      },
+      () => {
+        locationStatus.textContent = "We couldn’t access your location. Allow location access in your browser and try again.";
+        nearbyButton.disabled = false;
+        nearbyButton.textContent = "Try again";
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+    );
+  });
 
   analyzeButton.addEventListener("click", async () => {
     if (!selectedFile || analyzeButton.disabled) return;
