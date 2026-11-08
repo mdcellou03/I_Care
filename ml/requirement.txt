@@ -1,4 +1,5 @@
-torch
+fastai==2.8.12
+torch==2.15.0
 torchvision
 numpy
 pandas
@@ -8,6 +9,5 @@ scikit-learn
 matplotlib
 jupyter
 datasets
-fastai
 kagglehub
 mediapipe
