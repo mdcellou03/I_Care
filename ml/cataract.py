@@ -1,162 +1,151 @@
-"""Download the Kaggle cataract images and map their folders to project labels.
+"""Collect the project cataract images from the two Kaggle sources.
 
-Run from the ml directory with: python cataract.py
-The script maps Kaggle's normal class to Healthy and keeps Cataract as its own class.
+Run from I_Care/ml with ``python cataract.py --rebuild``. The first source has
+Healthy/Normal and Cataract folders; the second source contributes its
+``processed_images/test/cataract`` folder to the existing Cataract class.
 """
 
 from collections import Counter
+from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
+import argparse
 import re
 import shutil
-import argparse
 
 import kagglehub
 from PIL import Image
 
 
-DATASET_HANDLE = "nandanp6/cataract-image-dataset"
-DATASET_SUBPATH = "processed_images"
-OUTPUT_DIR = Path(__file__).resolve().parent / "data" / "cataract_images"
+SOURCES = (
+    {
+        "handle": "nandanp6/cataract-image-dataset",
+        "subpath": "processed_images",
+        "mode": "class_folders",
+    },
+    {
+        "handle": "hemooredaoo/cataract",
+        "subpath": "processed_images/test/cataract",
+        "mode": "cataract_only",
+    },
+)
+ML_DIR = Path(__file__).resolve().parent
+DATA_DIR = ML_DIR / "data"
+OUTPUT_DIR = DATA_DIR / "cataract_images"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 
 
-def label_for_path(relative_path: Path) -> str | None:
-    """Return a project label when a folder name or filename identifies the class."""
-    normalized_parts = [
-        re.sub(r"[^a-z0-9]+", "_", part.lower()) for part in relative_path.parts
-    ]
+def find_subpath(root: Path, wanted: str) -> Path:
+    """Find a selected Kaggle folder without depending on path capitalization."""
+    parts = Path(wanted).parts
+    candidates = [root]
+    for part in parts:
+        next_candidates = []
+        for parent in candidates:
+            if not parent.is_dir():
+                continue
+            next_candidates.extend(
+                child for child in parent.iterdir()
+                if child.is_dir() and child.name.casefold() == part.casefold()
+            )
+        candidates = next_candidates
+    if candidates:
+        return candidates[0]
+    raise FileNotFoundError(f"Could not find {wanted!r} inside downloaded dataset {root}.")
+
+
+def label_for_path(path: Path) -> str | None:
+    """Map source folder names from the first Kaggle dataset to project classes."""
     tokens = {
         token
-        for part in relative_path.parts
+        for part in path.parts
         for token in re.split(r"[^a-z0-9]+", part.lower())
         if token
     }
-
-    negative_cataract = any(
-        phrase in part
-        for part in normalized_parts
-        for phrase in ("no_cataract", "non_cataract", "without_cataract", "cataract_free")
-    ) or ("cataract" in tokens and bool({"no", "non", "without"} & tokens))
-    if negative_cataract or {"normal", "healthy"} & tokens:
+    if "normal" in tokens or "healthy" in tokens:
         return "Healthy"
-    if any("cataract" in part for part in normalized_parts) or "cataract" in tokens:
+    if "cataract" in tokens and not ({"no", "non", "without"} & tokens):
         return "Cataract"
     return None
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--rebuild",
-        action="store_true",
-        help="replace the extracted data/cataract_images folder",
-    )
+    parser.add_argument("--rebuild", action="store_true", help="replace the extracted image folders")
     args = parser.parse_args()
 
-    # Download the dataset root first. Some Kaggle dataset versions return 404 for
-    # a selected subfolder even when the dataset itself is available.
-    dataset_dir = Path(kagglehub.dataset_download(DATASET_HANDLE))
-    if not dataset_dir.exists():
-        raise FileNotFoundError(f"KaggleHub returned a path that does not exist: {dataset_dir}")
+    if OUTPUT_DIR.exists() and any(OUTPUT_DIR.iterdir()) and not args.rebuild:
+        raise FileExistsError(f"{OUTPUT_DIR} already has images. Run `python cataract.py --rebuild`.")
 
-    # Use the folder selected in the user's Kaggle URL. Resolve its actual casing
-    # from the downloaded tree, since Kaggle file paths can be case-sensitive.
-    source_dir = next(
-        (
-            path
-            for path in dataset_dir.rglob("*")
-            if path.is_dir() and path.name.casefold() == DATASET_SUBPATH.casefold()
-        ),
-        None,
-    )
-    if source_dir is None:
-        top_level = [path.name for path in dataset_dir.iterdir()]
-        raise FileNotFoundError(
-            f"Could not find the {DATASET_SUBPATH!r} folder in {dataset_dir}. "
-            f"Top-level entries: {top_level}"
-        )
+    source_dirs = []
+    for source in SOURCES:
+        root = Path(kagglehub.dataset_download(source["handle"]))
+        if not root.exists():
+            raise FileNotFoundError(f"KaggleHub returned a missing path: {root}")
+        source_dirs.append((source, find_subpath(root, source["subpath"])))
 
-    # Avoid mixing a new download with files from an older extraction.
-    if OUTPUT_DIR.exists() and any(OUTPUT_DIR.iterdir()):
-        if not args.rebuild:
-            raise FileExistsError(
-                f"{OUTPUT_DIR} already contains extracted images. "
-                "Run `python cataract.py --rebuild` to replace them."
-            )
-        expected_output = (Path(__file__).resolve().parent / "data" / "cataract_images").resolve()
-        if OUTPUT_DIR.resolve() != expected_output:
-            raise RuntimeError(f"Refusing to remove unexpected output path: {OUTPUT_DIR}")
-        shutil.rmtree(OUTPUT_DIR)
-
+    build_dir = DATA_DIR / f"cataract_images_build_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
     counts = Counter()
     unreadable = 0
-    unlabelled = []
-    copied_hashes = {}
+    duplicate_count = 0
+    seen = {}
+    try:
+        for source, source_dir in source_dirs:
+            for image_path in source_dir.rglob("*"):
+                if not image_path.is_file() or image_path.suffix.lower() not in IMAGE_EXTENSIONS:
+                    continue
+                if source["mode"] == "cataract_only":
+                    label = "Cataract"
+                else:
+                    label = label_for_path(image_path.relative_to(source_dir))
+                    if label is None:
+                        continue
+                try:
+                    with Image.open(image_path) as image:
+                        image.verify()
+                    digest = sha256(image_path.read_bytes()).hexdigest()
+                except Exception as error:
+                    unreadable += 1
+                    print(f"Skipping unreadable image {image_path}: {error}")
+                    continue
+                if digest in seen:
+                    if seen[digest] != label:
+                        raise ValueError(f"Duplicate image has conflicting labels: {seen[digest]} and {label}")
+                    duplicate_count += 1
+                    continue
+                seen[digest] = label
+                destination_dir = build_dir / label
+                destination_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(image_path, destination_dir / f"{digest[:20]}{image_path.suffix.lower()}")
+                counts[label] += 1
 
-    for source_path in source_dir.rglob("*"):
-        if not source_path.is_file() or source_path.suffix.lower() not in IMAGE_EXTENSIONS:
-            continue
+        if not counts["Healthy"] or not counts["Cataract"]:
+            raise ValueError(f"Expected Healthy and Cataract images; extracted counts: {dict(counts)}")
 
-        relative_path = source_path.relative_to(source_dir)
-        label = label_for_path(relative_path)
-        if label is None:
-            unlabelled.append(str(relative_path))
-            continue
-
+        backup_dir = None
+        if OUTPUT_DIR.exists():
+            if OUTPUT_DIR.resolve().parent != DATA_DIR.resolve():
+                raise RuntimeError(f"Refusing to move unexpected directory: {OUTPUT_DIR}")
+            backup_dir = DATA_DIR / f"cataract_images_backup_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+            shutil.move(str(OUTPUT_DIR), str(backup_dir))
         try:
-            # Verify that the image can be decoded before copying it to the class folder.
-            with Image.open(source_path) as image:
-                image.verify()
-            file_hash = sha256(source_path.read_bytes()).hexdigest()
-        except Exception as error:
-            unreadable += 1
-            print(f"Skipping unreadable image {relative_path}: {error}")
-            continue
+            shutil.move(str(build_dir), str(OUTPUT_DIR))
+        except Exception:
+            if backup_dir and backup_dir.exists() and not OUTPUT_DIR.exists():
+                shutil.move(str(backup_dir), str(OUTPUT_DIR))
+            raise
+    except Exception:
+        if build_dir.exists():
+            shutil.rmtree(build_dir)
+        raise
 
-        # Avoid creating duplicate copies when identical files occur more than once.
-        if file_hash in copied_hashes:
-            if copied_hashes[file_hash] != label:
-                raise ValueError(
-                    f"The same image file appears under both {copied_hashes[file_hash]} and {label}."
-                )
-            continue
-        copied_hashes[file_hash] = label
-
-        destination_dir = OUTPUT_DIR / label
-        destination_dir.mkdir(parents=True, exist_ok=True)
-        destination = destination_dir / f"{file_hash[:20]}{source_path.suffix.lower()}"
-        shutil.copy2(source_path, destination)
-        counts[label] += 1
-
-    if not counts["Healthy"] or not counts["Cataract"]:
-        examples = "\n".join(unlabelled[:20]) or "(no image files were found)"
-        if OUTPUT_DIR.exists():
-            shutil.rmtree(OUTPUT_DIR)
-        raise ValueError(
-            "Could not identify images for both Normal/Healthy and Cataract in the downloaded folder. "
-            f"Inspect these paths and update label_for_path():\n{examples}"
-        )
-
-    if unlabelled:
-        examples = "\n".join(unlabelled[:20])
-        if OUTPUT_DIR.exists():
-            shutil.rmtree(OUTPUT_DIR)
-        raise ValueError(
-            "Some image paths did not reveal a class label. Inspect these paths and update "
-            f"label_for_path() before using the extraction:\n{examples}"
-        )
-
-    print(f"Downloaded source: {source_dir}")
-    print(f"Mapped image folders: {OUTPUT_DIR}")
-    print(f"Healthy (Kaggle Normal): {counts['Healthy']}")
-    print(f"Cataract: {counts['Cataract']}")
+    print(f"Output: {OUTPUT_DIR}")
+    for label in ("Healthy", "Cataract"):
+        print(f"{label}: {counts[label]}")
     print(f"Unreadable images skipped: {unreadable}")
-    print(f"Unrecognized image paths: {len(unlabelled)}")
-    if unlabelled:
-        print("Examples of unrecognized paths:")
-        for path in unlabelled[:10]:
-            print(f"  {path}")
+    print(f"Exact duplicate files skipped: {duplicate_count}")
+    for source, source_dir in source_dirs:
+        print(f"Source {source['handle']} ({source['subpath']}): {source_dir}")
 
 
 if __name__ == "__main__":

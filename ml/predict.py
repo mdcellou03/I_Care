@@ -1,6 +1,7 @@
 
 from pathlib import Path
 from fastai.vision.all import load_learner
+from recommendation import get_recommendation
 import json
 import sys
 
@@ -29,18 +30,24 @@ def predict_eye(image_path):
 
     # Convert scores to Python floats
     scores = {
-        label: round(float(score), 4)
+        str(label): round(float(score), 4)
         for label, score in zip(
             learn.dls.vocab, probabilities
         )
     }
 
+    pred_class = str(prediction)
+    confidence = float(probabilities[index])
+
     return {
-        "prediction": str(prediction),
-        "confidence": round(
-            float(probabilities[index]), 4
-        ),
-        "scores": scores
+        "prediction": pred_class,
+        "confidence": round(confidence, 4),
+        "scores": scores,
+        "recommendations": get_recommendation(pred_class),
+        "disclaimer": (
+            "I_Care is an experimental educational tool. "
+            "Results are not a medical diagnosis or prescription."
+        )
     }
 
 

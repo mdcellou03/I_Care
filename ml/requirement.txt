@@ -10,3 +10,4 @@ jupyter
 datasets
 fastai
 kagglehub
+mediapipe

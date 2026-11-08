@@ -1,10 +1,13 @@
-"""Combine the jaundice and cataract sources into FastAI folder splits.
+"""Combine the eye-image sources into FastAI train, validation, and test splits.
 
 From I_Care/ml, run:
     python cataract.py
+    python conjunctivitis.py
+    python uveitis.py
+    python bulging_eyes.py
     python preprocess.py --rebuild
 
-The output is data/processed/{train,valid,test}/{Healthy,Jaundice,Cataract}/.
+The output is data/processed/{train,valid,test}/{Healthy,Jaundice,Cataract,Conjunctivitis,Uveitis,Bulging_Eyes}/.
 """
 
 import argparse
@@ -24,8 +27,11 @@ SEED = 42
 DATASET_DIR = ML_DIR / "data" / "jaundice_dataset"
 DATASET_ID = "Bleachcarte/Jaundice_Dataset"
 CATARACT_DIR = ML_DIR / "data" / "cataract_images"
+CONJUNCTIVITIS_DIR = ML_DIR / "data" / "conjunctivitis_images" / "Conjunctivitis"
+UVEITIS_DIR = ML_DIR / "data" / "uveitis_images" / "Uveitis"
+BULGING_EYES_DIR = ML_DIR / "data" / "bulging_eyes_images" / "Bulging_Eyes"
 OUTPUT_DIR = ML_DIR / "data" / "processed"
-CLASS_NAMES = ("Healthy", "Jaundice", "Cataract")
+CLASS_NAMES = ("Healthy", "Jaundice", "Cataract", "Conjunctivitis", "Uveitis", "Bulging_Eyes")
 SPLIT_RATIOS = {"train": 0.70, "valid": 0.15, "test": 0.15}
 
 
@@ -68,6 +74,18 @@ def main() -> None:
         raise FileNotFoundError(
             f"Missing {', '.join(missing)} under {CATARACT_DIR}. "
             "Run `python cataract.py` first."
+        )
+    if not CONJUNCTIVITIS_DIR.is_dir():
+        raise FileNotFoundError(
+            f"Missing {CONJUNCTIVITIS_DIR}. Run `python conjunctivitis.py` first."
+        )
+    if not UVEITIS_DIR.is_dir():
+        raise FileNotFoundError(
+            f"Missing {UVEITIS_DIR}. Run `python uveitis.py` first."
+        )
+    if not BULGING_EYES_DIR.is_dir():
+        raise FileNotFoundError(
+            f"Missing {BULGING_EYES_DIR}. Run `python bulging_eyes.py` first."
         )
 
     # Accumulate unique images by decoded pixels. This catches exact duplicates across
@@ -125,6 +143,54 @@ def main() -> None:
                 print(f"Skipping unreadable image {image_path}: {error}")
                 continue
             add_image(image, label, str(image_path))
+
+    conjunctivitis_paths = [
+        path for path in CONJUNCTIVITIS_DIR.rglob("*")
+        if path.is_file()
+    ]
+    if not conjunctivitis_paths:
+        raise ValueError(f"No extracted image files found in {CONJUNCTIVITIS_DIR}.")
+    for image_path in conjunctivitis_paths:
+        try:
+            with Image.open(image_path) as image:
+                image = image.copy()
+        except Exception as error:
+            unreadable_count += 1
+            print(f"Skipping unreadable image {image_path}: {error}")
+            continue
+        add_image(image, "Conjunctivitis", str(image_path))
+
+    uveitis_paths = [
+        path for path in UVEITIS_DIR.rglob("*")
+        if path.is_file()
+    ]
+    if not uveitis_paths:
+        raise ValueError(f"No extracted image files found in {UVEITIS_DIR}.")
+    for image_path in uveitis_paths:
+        try:
+            with Image.open(image_path) as image:
+                image = image.copy()
+        except Exception as error:
+            unreadable_count += 1
+            print(f"Skipping unreadable image {image_path}: {error}")
+            continue
+        add_image(image, "Uveitis", str(image_path))
+
+    bulging_eyes_paths = [
+        path for path in BULGING_EYES_DIR.rglob("*")
+        if path.is_file()
+    ]
+    if not bulging_eyes_paths:
+        raise ValueError(f"No extracted image files found in {BULGING_EYES_DIR}.")
+    for image_path in bulging_eyes_paths:
+        try:
+            with Image.open(image_path) as image:
+                image = image.copy()
+        except Exception as error:
+            unreadable_count += 1
+            print(f"Skipping unreadable image {image_path}: {error}")
+            continue
+        add_image(image, "Bulging_Eyes", str(image_path))
 
     # Split each class independently with a fixed seed. No patient IDs are provided,
     # so the best available leakage check is grouping exact duplicate pixel images.
