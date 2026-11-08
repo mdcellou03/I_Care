@@ -35,3 +35,34 @@ def check_framing(image: Image.Image) -> str | None:
     # minSize is relative to the photo, so a tiny, far-away eye doesn't count.
     eyes = _EYE.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(width // 15, width // 15))
     return None if len(eyes) else "no_eye_found"
+
+
+def crop_to_eyes(image: Image.Image) -> Image.Image:
+    """If a whole face is visible, crop to the eye region before prediction.
+
+    The model was trained mostly on close-ups of eyes; given a whole face it reacts to
+    skin and background (a clear selfie scored "Jaundice", the same eyes cropped scored
+    "Healthy"). Close-ups with no detectable face are returned unchanged.
+    """
+    gray = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2GRAY)
+    height, width = gray.shape
+    faces = _FACE.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(width // 12, width // 12))
+    if not len(faces):
+        return image
+
+    x, y, w, h = max(faces, key=lambda face: face[2])
+    # Eyes sit in a band roughly 20-55% of the way down a detected face box.
+    band_top, band_bottom = y + h // 5, y + h * 11 // 20
+    eyes = _EYE.detectMultiScale(gray[band_top:band_bottom, x:x + w], scaleFactor=1.1, minNeighbors=5, minSize=(w // 8, w // 8))
+
+    if len(eyes):
+        # Box around all detected eyes (coordinates are relative to the band), plus a margin.
+        pad = w // 10
+        left = x + min(ex for ex, _, _, _ in eyes) - pad
+        right = x + max(ex + ew for ex, _, ew, _ in eyes) + pad
+        top = band_top + min(ey for _, ey, _, _ in eyes) - pad
+        bottom = band_top + max(ey + eh for _, ey, _, eh in eyes) + pad
+    else:
+        left, right, top, bottom = x, x + w, band_top, band_bottom
+
+    return image.crop((max(0, left), max(0, top), min(width, right), min(height, bottom)))

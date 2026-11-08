@@ -82,8 +82,9 @@ def analyze(file: UploadFile = File(...)) -> AnalyzeResponse:
     problem = framing.check_framing(image)
     if problem:
         raise ApiError(422, problem, FRAMING_MESSAGES[problem])
-    
-    result = predictor.predict(image)
+
+    # The model was trained on eye close-ups, so give it the eye region rather than a whole face.
+    result = predictor.predict(framing.crop_to_eyes(image))
     return AnalyzeResponse(
         predicted_class=result["label"],
         confidence=result["confidence"],
